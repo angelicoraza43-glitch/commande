@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commander</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+body{font-family:sans-serif;max-width:480px;margin:auto;padding:12px}
+.ligne{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #ddd}
+.qte button{width:36px;height:36px;font-size:18px}
+.qte span{display:inline-block;width:36px;text-align:center}
+#carte{height:260px;margin:8px 0}
+input,textarea{width:100%;padding:8px;box-sizing:border-box;margin:4px 0}
+#total{font-size:20px;font-weight:bold;margin:12px 0}
+.gros{width:100%;padding:12px;font-size:16px;margin-top:8px}
+pre{white-space:pre-wrap;background:#f3f3f3;padding:8px}
+</style>
+</head>
+<body>
+<h2>Ma commande</h2>
+<div id="liste"></div>
+
+<h3>Autre produit</h3>
+<textarea id="autre" placeholder="Ex : 2 kg d'oignons (le prix sera confirmé)"></textarea>
+
+<div id="total"></div>
+
+<h3>Lieu de livraison</h3>
+<button class="gros" onclick="maPosition()">📍 Utiliser ma position</button>
+<div id="carte"></div>
+<small>Ou touchez la carte / déplacez le repère à la main.</small>
+<input id="repere" placeholder="Point de repère (ex : près de l'école...)">
+<input id="nom" placeholder="Votre nom">
+<input id="tel" placeholder="Votre téléphone">
+<button class="gros" onclick="valider()">Valider la commande</button>
+<pre id="recap"></pre>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ===== VOS PRODUITS ET PRIX (à modifier ici) =====
+const PRODUITS = [
+  {nom:"Pomme de terre (frites)", prix:3000},
+  {nom:"Pomme de terre (normale)", prix:2500},
+  {nom:"Haricot vert", prix:4000},
+  {nom:"Carotte", prix:2000},
+  {nom:"Manioc", prix:1500},
+  {nom:"Patate douce", prix:1800},
+  {nom:"Riz", prix:3200}
+];
+// =================================================
+
+const qte = {};
+const liste = document.getElementById("liste");
+PRODUITS.forEach((p,i)=>{
+  qte[i]=0;
+  liste.innerHTML += `<div class="ligne"><div>${p.nom}<br><small>${p.prix} Ar/kg</small></div>
+  <div class="qte"><button onclick="chg(${i},-1)">−</button><span id="q${i}">0</span><button onclick="chg(${i},1)">+</button></div></div>`;
+});
+
+function chg(i,d){
+  qte[i]=Math.max(0,qte[i]+d);
+  document.getElementById("q"+i).textContent=qte[i];
+  calcul();
+}
+function calcul(){
+  let t=0;
+  PRODUITS.forEach((p,i)=>t+=p.prix*qte[i]);
+  document.getElementById("total").textContent="Total : "+t.toLocaleString("fr-FR")+" Ar";
+  return t;
+}
+calcul();
+
+// Carte (position de départ : à changer pour votre ville)
+const carte = L.map("carte").setView([-20.5318,47.2428],13);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(carte);
+const repere = L.marker(carte.getCenter(),{draggable:true}).addTo(carte);
+carte.on("click",e=>repere.setLatLng(e.latlng));
+
+function maPosition(){
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const ll=[pos.coords.latitude,pos.coords.longitude];
+    repere.setLatLng(ll);
+    carte.setView(ll,16);
+  },()=>alert("Position impossible. Placez le repère à la main sur la carte."));
+}
+
+function valider(){
+  let txt="COMMANDE\n";
+  PRODUITS.forEach((p,i)=>{ if(qte[i]>0) txt+=`- ${p.nom} : ${qte[i]} kg\n`; });
+  const autre=document.getElementById("autre").value.trim();
+  if(autre) txt+=`- Autre : ${autre}\n`;
+  txt+=`\n${document.getElementById("total").textContent}\n`;
+  const ll=repere.getLatLng();
+  txt+=`\nNom : ${document.getElementById("nom").value}`;
+  txt+=`\nTél : ${document.getElementById("tel").value}`;
+  txt+=`\nRepère : ${document.getElementById("repere").value}`;
+  txt+=`\nCarte : https://www.openstreetmap.org/?mlat=${ll.lat}&mlon=${ll.lng}`;
+  document.getElementById("recap").textContent=txt;
+}
+</script>
+</body>
+</html>
