@@ -7,9 +7,16 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 body{font-family:sans-serif;max-width:480px;margin:auto;padding:12px}
-.ligne{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #ddd}
+.ligne{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #ddd}
+.ligne .txt{flex:1}
+.ligne img,.ph{width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0}
+.ph{background:#eee;display:flex;align-items:center;justify-content:center;font-size:26px}
+.ligne img{cursor:zoom-in}
+.qte{white-space:nowrap}
 .qte button{width:36px;height:36px;font-size:18px}
-.qte span{display:inline-block;width:36px;text-align:center}
+.qte span{display:inline-block;width:32px;text-align:center}
+#zoom{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:9999}
+#zoom img{max-width:94%;max-height:90%;border-radius:8px}
 #carte{height:300px;margin:8px 0;border-radius:8px}
 input,textarea{width:100%;padding:8px;box-sizing:border-box;margin:4px 0;font-size:16px}
 #total{font-size:20px;font-weight:bold;margin:12px 0 4px}
@@ -28,6 +35,8 @@ pre{white-space:pre-wrap;background:#fff;padding:8px;color:#222}
 </head>
 <body>
 
+<div id="zoom" onclick="this.style.display='none'"><img id="zoomImg" alt=""></div>
+
 <div id="confirmation" class="cache">
   <div class="ok">
     <h2>✅ Commande envoyée !</h2>
@@ -39,7 +48,7 @@ pre{white-space:pre-wrap;background:#fff;padding:8px;color:#222}
 
 <div id="formulaire">
 <h2>Ma commande</h2>
-<input id="rechProduit" placeholder="🔍 Rechercher un produit (ex : carotte, riz...)">
+<input id="rechProduit" placeholder="🔍 Rechercher un produit (ex : carotte, huile...)">
 <div id="liste"></div>
 <div id="aucun" class="cache">Aucun produit ne correspond à votre recherche.</div>
 
@@ -54,7 +63,7 @@ pre{white-space:pre-wrap;background:#fff;padding:8px;color:#222}
 <div id="resultats"></div>
 
 <div id="carte"></div>
-<small>Vous pouvez aussi toucher la carte ou déplacer le repère pour l'ajuster.</small>
+<small>Vous pouvez aussi toucher la carte ou déplacer le repère pour l'ajuster. Le bouton en haut à droite de la carte change le type de carte.</small>
 <input id="repere" placeholder="Point de repère (ex : près de l'école...)">
 <input id="nom" placeholder="Votre nom">
 <input id="tel" type="tel" placeholder="Votre téléphone">
@@ -66,26 +75,40 @@ pre{white-space:pre-wrap;background:#fff;padding:8px;color:#222}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ===== VOS PRODUITS ET PRIX (à modifier ici, ajoutez autant de lignes que vous voulez) =====
+// photo : nom du fichier image ajouté dans GitHub (facultatif)
+// unite : "kg" par défaut, ou "bouteille", "sachet", "litre"... (facultatif)
 const PRODUITS = [
   {nom:"Pomme de terre (frites)", prix:3000},
   {nom:"Pomme de terre (normale)", prix:2500},
   {nom:"Haricot vert", prix:4000},
   {nom:"Carotte", prix:2000},
   {nom:"Manioc", prix:1500},
-  {nom:"Patate douce", prix:1800},
-  {nom:"Riz", prix:3200}
+  {nom:"Patate douce", prix:1800, unite:"tas", photo:},
+  {nom:"Riz", prix:3200},
+  {nom:"Huile de soja Hina 1 L", prix:10000, unite:"bouteille", photo:
+  // Exemple avec photo et unité :
+  // ,{nom:"Huile Lesieur 1 L", prix:9000, unite:"bouteille", photo:"huile-lesieur.jpg"}
 ];
 const CLE = "61acb666-ce2e-49ee-9742-06c37eedd9b1";
 // ===========================================================================================
 
 function norm(s){ return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
+function unite(p){ return p.unite || "kg"; }
+function zoom(src){
+  document.getElementById("zoomImg").src=src;
+  document.getElementById("zoom").style.display="flex";
+}
 
 // ===== PRODUITS =====
 const qte = {};
 const liste = document.getElementById("liste");
 PRODUITS.forEach((p,i)=>{
   qte[i]=0;
-  liste.innerHTML += `<div class="ligne" id="l${i}"><div>${p.nom}<br><small>${p.prix} Ar/kg</small></div>
+  const photo = p.photo
+    ? `<img src="${p.photo}" alt="${p.nom}" loading="lazy" onclick="zoom('${p.photo}')" onerror="this.outerHTML='<div class=ph>📦</div>'">`
+    : `<div class="ph">📦</div>`;
+  liste.innerHTML += `<div class="ligne" id="l${i}">${photo}
+  <div class="txt">${p.nom}<br><small>${p.prix} Ar/${unite(p)}</small></div>
   <div class="qte"><button onclick="chg(${i},-1)">−</button><span id="q${i}">0</span><button onclick="chg(${i},1)">+</button></div></div>`;
 });
 
@@ -98,7 +121,7 @@ function calcul(){
   let t=0, lignes=[];
   PRODUITS.forEach((p,i)=>{
     t+=p.prix*qte[i];
-    if(qte[i]>0) lignes.push("• "+p.nom+" : "+qte[i]+" kg");
+    if(qte[i]>0) lignes.push("• "+p.nom+" : "+qte[i]+" "+unite(p));
   });
   document.getElementById("total").textContent="Total : "+t.toLocaleString("fr-FR")+" Ar";
   document.getElementById("panier").textContent = lignes.length ? "Mon panier :\n"+lignes.join("\n") : "";
@@ -117,10 +140,18 @@ document.getElementById("rechProduit").addEventListener("input",e=>{
   document.getElementById("aucun").classList.toggle("cache", visibles>0);
 });
 
-// ===== CARTE =====
+// ===== CARTE (plan ou satellite) =====
 let positionChoisie=false;
 const carte = L.map("carte").setView([-20.5318,47.2428],13); // position de départ : à changer pour votre ville
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(carte);
+
+const plan = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"});
+const satellite = L.layerGroup([
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Imagery © Esri"}),
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19})
+]);
+plan.addTo(carte);
+L.control.layers({"🗺️ Plan":plan,"🛰️ Satellite":satellite},null,{position:"topright",collapsed:true}).addTo(carte);
+
 const repere = L.marker(carte.getCenter(),{draggable:true}).addTo(carte);
 
 function majStatut(texte){
@@ -268,7 +299,7 @@ async function valider(){
   if(!positionChoisie && !rep) return montrerErreur("Indiquez le lieu de livraison : position automatique, recherche d'un lieu, repère sur la carte, ou point de repère écrit.");
 
   let txt="";
-  PRODUITS.forEach((p,i)=>{ if(qte[i]>0) txt+=`- ${p.nom} : ${qte[i]} kg\n`; });
+  PRODUITS.forEach((p,i)=>{ if(qte[i]>0) txt+=`- ${p.nom} : ${qte[i]} ${unite(p)}\n`; });
   txt+=`\nTotal : ${total.toLocaleString("fr-FR")} Ar`;
 
   const ll=repere.getLatLng();
