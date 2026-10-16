@@ -11,13 +11,27 @@ body{font-family:sans-serif;max-width:480px;margin:auto;padding:12px}
 .qte button{width:36px;height:36px;font-size:18px}
 .qte span{display:inline-block;width:36px;text-align:center}
 #carte{height:260px;margin:8px 0}
-input,textarea{width:100%;padding:8px;box-sizing:border-box;margin:4px 0}
+input,textarea{width:100%;padding:8px;box-sizing:border-box;margin:4px 0;font-size:16px}
 #total{font-size:20px;font-weight:bold;margin:12px 0}
 .gros{width:100%;padding:12px;font-size:16px;margin-top:8px}
-pre{white-space:pre-wrap;background:#f3f3f3;padding:8px}
+.ok{background:#e6f6ea;border:2px solid #2e9e4f;color:#17622f;padding:16px;border-radius:8px;margin:12px 0}
+.err{background:#fdeaea;border:2px solid #d33;color:#9a1b1b;padding:12px;border-radius:8px;margin:12px 0}
+pre{white-space:pre-wrap;background:#fff;padding:8px;color:#222}
+.cache{display:none}
 </style>
 </head>
 <body>
+
+<div id="confirmation" class="cache">
+  <div class="ok">
+    <h2>✅ Commande envoyée !</h2>
+    <p>Merci ! Nous avons bien reçu votre commande. Nous vous contactons très bientôt par téléphone pour la confirmer.</p>
+    <pre id="recap"></pre>
+  </div>
+  <button class="gros" onclick="location.reload()">Faire une nouvelle commande</button>
+</div>
+
+<div id="formulaire">
 <h2>Ma commande</h2>
 <div id="liste"></div>
 
@@ -32,9 +46,11 @@ pre{white-space:pre-wrap;background:#f3f3f3;padding:8px}
 <small>Ou touchez la carte / déplacez le repère à la main.</small>
 <input id="repere" placeholder="Point de repère (ex : près de l'école...)">
 <input id="nom" placeholder="Votre nom">
-<input id="tel" placeholder="Votre téléphone">
-<button class="gros" onclick="valider()">Valider la commande</button>
-<pre id="recap"></pre>
+<input id="tel" type="tel" placeholder="Votre téléphone">
+
+<div id="erreur" class="err cache"></div>
+<button id="btn" class="gros" onclick="valider()">Valider la commande</button>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -48,6 +64,7 @@ const PRODUITS = [
   {nom:"Patate douce", prix:1800},
   {nom:"Riz", prix:3200}
 ];
+const CLE = "61acb666-ce2e-49ee-9742-06c37eedd9b1";
 // =================================================
 
 const qte = {};
@@ -72,31 +89,84 @@ function calcul(){
 calcul();
 
 // Carte (position de départ : à changer pour votre ville)
+let positionChoisie=false;
 const carte = L.map("carte").setView([-20.5318,47.2428],13);
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(carte);
 const repere = L.marker(carte.getCenter(),{draggable:true}).addTo(carte);
-carte.on("click",e=>repere.setLatLng(e.latlng));
+carte.on("click",e=>{repere.setLatLng(e.latlng);positionChoisie=true;});
+repere.on("dragend",()=>{positionChoisie=true;});
 
 function maPosition(){
   navigator.geolocation.getCurrentPosition(pos=>{
     const ll=[pos.coords.latitude,pos.coords.longitude];
     repere.setLatLng(ll);
     carte.setView(ll,16);
+    positionChoisie=true;
   },()=>alert("Position impossible. Placez le repère à la main sur la carte."));
 }
 
-function valider(){
-  let txt="COMMANDE\n";
-  PRODUITS.forEach((p,i)=>{ if(qte[i]>0) txt+=`- ${p.nom} : ${qte[i]} kg\n`; });
+function montrerErreur(msg){
+  const e=document.getElementById("erreur");
+  e.textContent=msg;
+  e.classList.remove("cache");
+  e.scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+async function valider(){
+  document.getElementById("erreur").classList.add("cache");
+  const nom=document.getElementById("nom").value.trim();
+  const tel=document.getElementById("tel").value.trim();
   const autre=document.getElementById("autre").value.trim();
+  const rep=document.getElementById("repere").value.trim();
+  const total=calcul();
+
+  if(total===0 && !autre) return montrerErreur("Choisissez au moins un produit avant de valider.");
+  if(!nom) return montrerErreur("Veuillez écrire votre nom.");
+  if(!tel) return montrerErreur("Veuillez écrire votre numéro de téléphone.");
+  if(!positionChoisie && !rep) return montrerErreur("Indiquez le lieu de livraison : touchez 📍, placez le repère sur la carte, ou écrivez un point de repère.");
+
+  let txt="";
+  PRODUITS.forEach((p,i)=>{ if(qte[i]>0) txt+=`- ${p.nom} : ${qte[i]} kg\n`; });
   if(autre) txt+=`- Autre : ${autre}\n`;
-  txt+=`\n${document.getElementById("total").textContent}\n`;
+  txt+=`\nTotal : ${total.toLocaleString("fr-FR")} Ar`;
+
   const ll=repere.getLatLng();
-  txt+=`\nNom : ${document.getElementById("nom").value}`;
-  txt+=`\nTél : ${document.getElementById("tel").value}`;
-  txt+=`\nRepère : ${document.getElementById("repere").value}`;
-  txt+=`\nCarte : https://www.openstreetmap.org/?mlat=${ll.lat}&mlon=${ll.lng}`;
-  document.getElementById("recap").textContent=txt;
+  const lieu = positionChoisie
+    ? `https://www.openstreetmap.org/?mlat=${ll.lat}&mlon=${ll.lng}`
+    : "Pas de position sur la carte";
+  const complet = `COMMANDE\n${txt}\n\nNom : ${nom}\nTél : ${tel}\nRepère : ${rep}\nCarte : ${lieu}`;
+
+  const btn=document.getElementById("btn");
+  btn.disabled=true;
+  btn.textContent="Envoi en cours…";
+
+  try{
+    const rep2 = await fetch("https://api.web3forms.com/submit",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Accept":"application/json"},
+      body:JSON.stringify({
+        access_key:CLE,
+        subject:"Nouvelle commande de "+nom,
+        from_name:"Commande légumes",
+        name:nom,
+        phone:tel,
+        message:complet
+      })
+    });
+    const data = await rep2.json();
+    if(data.success){
+      document.getElementById("recap").textContent=txt;
+      document.getElementById("formulaire").classList.add("cache");
+      document.getElementById("confirmation").classList.remove("cache");
+      window.scrollTo({top:0,behavior:"smooth"});
+    }else{
+      throw new Error("echec");
+    }
+  }catch(err){
+    btn.disabled=false;
+    btn.textContent="Valider la commande";
+    montrerErreur("❌ La commande n'a pas pu être envoyée. Vérifiez votre connexion et réessayez. Vos choix sont conservés.");
+  }
 }
 </script>
 </body>
