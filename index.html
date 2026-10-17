@@ -29,6 +29,8 @@ input,textarea{width:100%;padding:8px;box-sizing:border-box;margin:4px 0;font-si
 .res small{display:block;color:#666;margin-top:2px}
 #resultats{border-radius:8px;overflow:hidden;background:#fff}
 #resultats .titre{padding:8px 10px;font-size:13px;color:#666;background:#f5f5f5}
+.pay{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #ccc;border-radius:8px;margin:6px 0;font-size:16px}
+.pay input{width:auto;margin:0}
 pre{white-space:pre-wrap;background:#fff;padding:8px;color:#222}
 .cache{display:none}
 </style>
@@ -57,6 +59,12 @@ pre{white-space:pre-wrap;background:#fff;padding:8px;color:#222}
 
 <div id="total"></div>
 <div id="panier"></div>
+
+<h3>Paiement</h3>
+<label class="pay"><input type="radio" name="paiement" value="À la livraison" checked> 💵 Payer à la livraison</label>
+<label class="pay"><input type="radio" name="paiement" value="Mvola"> 📱 Mvola</label>
+<label class="pay"><input type="radio" name="paiement" value="Orange Money"> 🟠 Orange Money</label>
+<div id="infoPay" class="info cache"></div>
 
 <h3>Lieu de livraison</h3>
 <div id="statut" class="info">📡 Recherche de votre position…</div>
@@ -108,8 +116,9 @@ const qte = {};
 const liste = document.getElementById("liste");
 PRODUITS.forEach((p,i)=>{
   qte[i]=0;
+  const f = p.photo ? encodeURI(p.photo) : "";
   const photo = p.photo
-    ? `<img src="${p.photo}" alt="${p.nom}" loading="lazy" onclick="zoom('${p.photo}')" onerror="this.outerHTML='<div class=ph>📦</div>'">`
+    ? `<img src="${f}" alt="${p.nom}" loading="lazy" onclick="zoom('${f}')" onerror="this.outerHTML='<div class=ph>📦</div>'">`
     : `<div class="ph">📦</div>`;
   liste.innerHTML += `<div class="ligne" id="l${i}">${photo}
   <div class="txt">${p.nom}<br><small>${p.prix} Ar/${unite(p)}</small></div>
@@ -120,6 +129,7 @@ function chg(i,d){
   qte[i]=Math.max(0,qte[i]+d);
   document.getElementById("q"+i).textContent=qte[i];
   calcul();
+  majPaiement();
 }
 function calcul(){
   let t=0, lignes=[];
@@ -282,6 +292,30 @@ champ.addEventListener("keydown",e=>{
   }
 });
 
+// ===== PAIEMENT =====
+const PAIEMENT_NUMEROS = {
+  "Mvola": {numero:"0382698090", affiche:"038 26 980 90"},
+  "Orange Money": {numero:"0377057929", affiche:"037 70 579 29"}
+};
+function copierNumero(n){
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(n).then(()=>alert("Numéro copié : "+n)).catch(()=>alert("Numéro : "+n));
+  }else{ alert("Numéro : "+n); }
+}
+function majPaiement(){
+  const choix=document.querySelector('input[name="paiement"]:checked').value;
+  const zonePay=document.getElementById("infoPay");
+  const p=PAIEMENT_NUMEROS[choix];
+  if(!p){ zonePay.classList.add("cache"); return; }
+  const total=calcul();
+  zonePay.innerHTML = total===0
+    ? "Choisissez d'abord vos produits : le montant à payer s'affichera ici."
+    : `Envoyez <b>${total.toLocaleString("fr-FR")} Ar</b> par <b>${choix}</b> au numéro :<br><b style="font-size:20px">${p.affiche}</b><br><button class="gros" type="button" onclick="copierNumero('${p.numero}')">📋 Copier le numéro</button><br><small>Écrivez bien votre nom dans la case « Votre nom » en bas : c'est avec lui que nous retrouvons votre paiement.</small>`;
+  zonePay.classList.remove("cache");
+}
+document.querySelectorAll('input[name="paiement"]').forEach(r=>r.addEventListener("change",majPaiement));
+majPaiement();
+
 // ===== ENVOI DE LA COMMANDE =====
 function montrerErreur(msg){
   const e=document.getElementById("erreur");
@@ -305,6 +339,8 @@ async function valider(){
   let txt="";
   PRODUITS.forEach((p,i)=>{ if(qte[i]>0) txt+=`- ${p.nom} : ${qte[i]} ${unite(p)}\n`; });
   txt+=`\nTotal : ${total.toLocaleString("fr-FR")} Ar`;
+  const paiement=document.querySelector('input[name="paiement"]:checked').value;
+  txt+=`\nPaiement : ${paiement}`;
 
   const ll=repere.getLatLng();
   const coord=ll.lat.toFixed(6)+","+ll.lng.toFixed(6);
