@@ -26,6 +26,7 @@ input,textarea{width:100%;padding:8px;box-sizing:border-box;margin:4px 0;font-si
 .err{background:#fdeaea;border:2px solid #d33;color:#9a1b1b;padding:12px;border-radius:8px;margin:12px 0}
 .info{background:#eef4ff;border:1px solid #9bb8f0;padding:10px;border-radius:8px;margin:8px 0}
 .nb{color:#c00;font-weight:bold;font-size:14px;margin:10px 0;padding:8px 10px;border-left:4px solid #c00;background:#fff5f5;border-radius:4px}
+.ok .nb{font-size:15px}
 .res{display:block;width:100%;text-align:left;padding:10px;margin:0;font-size:15px;background:#fff;border:0;border-bottom:1px solid #eee}
 .res small{display:block;color:#666;margin-top:2px}
 #resultats{border-radius:8px;overflow:hidden;background:#fff}
@@ -43,7 +44,8 @@ pre{white-space:pre-wrap;background:#fff;padding:8px;color:#222}
 <div id="confirmation" class="cache">
   <div class="ok">
     <h2>✅ Commande envoyée !</h2>
-    <p>Merci ! Nous avons bien reçu votre commande. Nous vous contactons très bientôt par téléphone pour la confirmer.</p>
+    <p id="msgConf"></p>
+    <div id="msgPaiement" class="nb cache"></div>
     <pre id="recap"></pre>
   </div>
   <button class="gros" onclick="location.reload()">Faire une nouvelle commande</button>
@@ -375,6 +377,16 @@ async function valider(){
     });
     const data = await rep2.json();
     if(data.success){
+      const msgConf=document.getElementById("msgConf");
+      const msgPaiement=document.getElementById("msgPaiement");
+      if(paiement==="À la livraison"){
+        msgConf.textContent="Merci ! Nous avons bien reçu votre commande. Nous vous contactons très bientôt par téléphone pour la confirmer.";
+        msgPaiement.classList.add("cache");
+      }else{
+        msgConf.textContent="Merci ! Votre commande a bien été envoyée.";
+        msgPaiement.textContent="Dès réception de votre paiement, nous vous enverrons un message sur votre numéro de téléphone pour confirmer définitivement votre commande.";
+        msgPaiement.classList.remove("cache");
+      }
       document.getElementById("recap").textContent=txt;
       document.getElementById("formulaire").classList.add("cache");
       document.getElementById("confirmation").classList.remove("cache");
