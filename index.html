@@ -25,6 +25,7 @@ input,textarea{width:100%;padding:8px;box-sizing:border-box;margin:4px 0;font-si
 .ok{background:#e6f6ea;border:2px solid #2e9e4f;color:#17622f;padding:16px;border-radius:8px;margin:12px 0}
 .err{background:#fdeaea;border:2px solid #d33;color:#9a1b1b;padding:12px;border-radius:8px;margin:12px 0}
 .info{background:#eef4ff;border:1px solid #9bb8f0;padding:10px;border-radius:8px;margin:8px 0}
+.nb{color:#c00;font-weight:bold;font-size:14px;margin:10px 0;padding:8px 10px;border-left:4px solid #c00;background:#fff5f5;border-radius:4px}
 .res{display:block;width:100%;text-align:left;padding:10px;margin:0;font-size:15px;background:#fff;border:0;border-bottom:1px solid #eee}
 .res small{display:block;color:#666;margin-top:2px}
 #resultats{border-radius:8px;overflow:hidden;background:#fff}
@@ -294,8 +295,8 @@ champ.addEventListener("keydown",e=>{
 
 // ===== PAIEMENT =====
 const PAIEMENT_NUMEROS = {
-  "Mvola": {numero:"0382698090", affiche:"038 26 980 90"},
-  "Orange Money": {numero:"0377057929", affiche:"037 70 579 29"}
+  "Mvola": {numero:"0382698090", affiche:"038 26 980 90", compte:"Angelico"},
+  "Orange Money": {numero:"0377057929", affiche:"037 70 579 29", compte:"Angelico Razafinantenaina"}
 };
 function copierNumero(n){
   if(navigator.clipboard){
@@ -310,7 +311,13 @@ function majPaiement(){
   const total=calcul();
   zonePay.innerHTML = total===0
     ? "Choisissez d'abord vos produits : le montant à payer s'affichera ici."
-    : `Envoyez <b>${total.toLocaleString("fr-FR")} Ar</b> par <b>${choix}</b> au numéro :<br><b style="font-size:20px">${p.affiche}</b><br><button class="gros" type="button" onclick="copierNumero('${p.numero}')">📋 Copier le numéro</button><br><small>Écrivez bien votre nom dans la case « Votre nom » en bas : c'est avec lui que nous retrouvons votre paiement.</small>`;
+    : `Montant à payer : <b>${total.toLocaleString("fr-FR")} Ar</b><br>
+Moyen de paiement : <b>${choix}</b><br>
+Numéro : <b style="font-size:20px">${p.affiche}</b><br>
+Nom du compte : <b>${p.compte}</b><br>
+<button class="gros" type="button" onclick="copierNumero('${p.numero}')">📋 Copier le numéro</button>
+<div class="nb">NB : Les frais de retrait sont à la charge du client. Veuillez les ajouter au montant envoyé afin que la totalité de la somme due nous parvienne.</div>
+<small>Pour faciliter l'identification de votre paiement, veuillez saisir votre nom complet dans le champ « Votre nom » ci-dessous.</small>`;
   zonePay.classList.remove("cache");
 }
 document.querySelectorAll('input[name="paiement"]').forEach(r=>r.addEventListener("change",majPaiement));
