@@ -7,6 +7,9 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 body{font-family:sans-serif;max-width:480px;margin:auto;padding:12px}
+#langues{display:flex;gap:6px;justify-content:flex-end;margin-bottom:10px}
+.lg{padding:6px 10px;border:1px solid #ccc;border-radius:16px;background:#fff;font-size:14px;cursor:pointer}
+.lg.actif{background:#2e9e4f;color:#fff;border-color:#2e9e4f}
 .ligne{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #ddd}
 .ligne .txt{flex:1}
 .ligne img,.ph{width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0}
@@ -43,72 +46,264 @@ pre{white-space:pre-wrap;background:#fff;padding:8px;color:#222}
 
 <div id="confirmation" class="cache">
   <div class="ok">
-    <h2>✅ Commande envoyée !</h2>
+    <h2 data-i18n="conf_titre"></h2>
     <p id="msgConf"></p>
     <div id="msgPaiement" class="nb cache"></div>
     <pre id="recap"></pre>
   </div>
-  <button class="gros" onclick="location.reload()">Faire une nouvelle commande</button>
+  <button class="gros" data-i18n="nouvelle" onclick="location.reload()"></button>
 </div>
 
 <div id="formulaire">
+
+<div id="langues">
+  <button class="lg" data-l="fr" onclick="setLang('fr')">🇫🇷 Français</button>
+  <button class="lg" data-l="mg" onclick="setLang('mg')">🇲🇬 Malagasy</button>
+  <button class="lg" data-l="en" onclick="setLang('en')">🇬🇧 English</button>
+</div>
+
 <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-<h2 style="margin:0">Ma commande</h2>
+<h2 style="margin:0" data-i18n="ma_commande"></h2>
 <img src="IMG_5831.jpeg" alt="Logo" style="height:56px;max-width:40%;object-fit:contain">
 </div>
-<input id="rechProduit" placeholder="🔍 Rechercher un produit (ex : carotte, huile...)">
+<input id="rechProduit" data-i18n-ph="rech_produit">
 <div id="liste"></div>
-<div id="aucun" class="cache">Aucun produit ne correspond à votre recherche.</div>
+<div id="aucun" class="cache" data-i18n="aucun"></div>
 
 <div id="total"></div>
 <div id="panier"></div>
 
-<h3>Paiement</h3>
-<label class="pay"><input type="radio" name="paiement" value="À la livraison" checked> 💵 Payer à la livraison</label>
+<h3 data-i18n="paiement"></h3>
+<label class="pay"><input type="radio" name="paiement" value="À la livraison" checked> <span data-i18n="pay_livraison"></span></label>
 <label class="pay"><input type="radio" name="paiement" value="Mvola"> 📱 Mvola</label>
 <label class="pay"><input type="radio" name="paiement" value="Orange Money"> 🟠 Orange Money</label>
 <div id="infoPay" class="info cache"></div>
 
-<h3>Lieu de livraison</h3>
-<div id="statut" class="info">📡 Recherche de votre position…</div>
-<button class="gros" onclick="maPosition(false)">📍 Utiliser ma position actuelle</button>
+<h3 data-i18n="lieu"></h3>
+<div id="statut" class="info"></div>
+<button class="gros" data-i18n="btn_pos" onclick="maPosition()"></button>
 
-<input id="recherche" placeholder="🔍 Ou cherchez un lieu (quartier, rue, école...)" autocomplete="off">
+<input id="recherche" data-i18n-ph="rech_lieu" autocomplete="off">
 <div id="resultats"></div>
 
 <div id="carte"></div>
-<small>Vous pouvez aussi toucher la carte ou déplacer le repère pour l'ajuster. Le bouton en haut à droite de la carte change le type de carte.</small>
-<input id="repere" placeholder="Point de repère (ex : près de l'école...)">
-<input id="nom" placeholder="Votre nom">
-<input id="tel" type="tel" placeholder="Votre téléphone">
+<small data-i18n="aide_carte"></small>
+<input id="repere" data-i18n-ph="repere">
+<input id="nom" data-i18n-ph="nom">
+<input id="tel" type="tel" data-i18n-ph="tel">
 
 <div id="erreur" class="err cache"></div>
-<button id="btn" class="gros" onclick="valider()">Valider la commande</button>
+<button id="btn" class="gros" data-i18n="valider" onclick="valider()"></button>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ===== VOS PRODUITS ET PRIX (à modifier ici, ajoutez autant de lignes que vous voulez) =====
+// nom : nom en français | mg : nom en malagasy (facultatif) | en : nom en anglais (facultatif)
 // photo : nom du fichier image ajouté dans GitHub (facultatif)
-// unite : "kg" par défaut, ou "bouteille", "sachet", "litre"... (facultatif)
+// unite : "kg" par défaut, ou "bouteille", "sachet", "litre", "tas"... (facultatif)
 const PRODUITS = [
-  {nom:"Pomme de terre (frites)", prix:3000},
-  {nom:"Pomme de terre (normale)", prix:2500, photo:"Image WebP.webp"},
-  {nom:"Haricot vert", prix:4000},
-  {nom:"Carotte", prix:2000},
-  {nom:"Manioc", prix:1500, unite:"tas"},
-  {nom:"Patate douce", prix:1800, unite:"tas"},
-  {nom:"Riz", prix:3200, photo:"IMG_5860.jpeg"},
-  {nom:"Oignon", prix:2000, photo:"IMG_5861.jpeg"},
-  {nom:"Huile de soja Hina 1 L", prix:10000, unite:"bouteille", photo:"IMG_5848.jpeg"}
+  {nom:"Pomme de terre (frites)", mg:"Ovy (ho an'ny frites)", en:"Potato (for fries)", prix:3000},
+  {nom:"Pomme de terre (normale)", mg:"Ovy (mahazatra)", en:"Potato (regular)", prix:2500, photo:"Image WebP.webp"},
+  {nom:"Haricot vert", mg:"Tsaramaso maitso", en:"Green beans", prix:4000},
+  {nom:"Carotte", mg:"Karaoty", en:"Carrot", prix:2000},
+  {nom:"Manioc", mg:"Mangahazo", en:"Cassava", prix:1500, unite:"tas"},
+  {nom:"Patate douce", mg:"Vomanga", en:"Sweet potato", prix:1800, unite:"tas"},
+  {nom:"Riz", mg:"Vary", en:"Rice", prix:3200, photo:"IMG_5860.jpeg"},
+  {nom:"Oignon", mg:"Tongolo", en:"Onion", prix:2000, photo:"IMG_5861.jpeg"},
+  {nom:"Huile de soja Hina 1 L", mg:"Menaka soja Hina 1 L", en:"Hina soybean oil 1 L", prix:10000, unite:"bouteille", photo:"IMG_5848.jpeg"}
   // Exemple avec photo et unité :
-  // ,{nom:"Huile Lesieur 1 L", prix:9000, unite:"bouteille", photo:"huile-lesieur.jpg"}
+  // ,{nom:"Huile Lesieur 1 L", mg:"Menaka Lesieur 1 L", en:"Lesieur oil 1 L", prix:9000, unite:"bouteille", photo:"huile-lesieur.jpg"}
 ];
 const CLE = "61acb666-ce2e-49ee-9742-06c37eedd9b1";
-// ===========================================================================================
 
-function norm(s){ return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
+// ===== TRADUCTION DES UNITÉS =====
+const UNITES = {
+  "kg":{mg:"kg",en:"kg"},
+  "bouteille":{mg:"tavoahangy",en:"bottle"},
+  "litre":{mg:"litatra",en:"litre"},
+  "sachet":{mg:"kitapo",en:"sachet"},
+  "tas":{mg:"tas",en:"pile"}
+};
+
+// ===== TEXTES DU SITE (français / malagasy / anglais) =====
+const T = {
+fr:{
+  titre_page:"Commander",
+  ma_commande:"Ma commande",
+  rech_produit:"🔍 Rechercher un produit (ex : carotte, huile...)",
+  aucun:"Aucun produit ne correspond à votre recherche.",
+  total:"Total :",
+  panier:"Mon panier :",
+  paiement:"Paiement",
+  pay_livraison:"💵 Payer à la livraison",
+  pay_livraison_court:"À la livraison",
+  pay_ligne:"Paiement",
+  lieu:"Lieu de livraison",
+  stat_init:"📡 Recherche de votre position…",
+  btn_pos:"📍 Utiliser ma position actuelle",
+  rech_lieu:"🔍 Ou cherchez un lieu (quartier, rue, école...)",
+  aide_carte:"Vous pouvez aussi toucher la carte ou déplacer le repère pour l'ajuster. Le bouton en haut à droite de la carte change le type de carte.",
+  repere:"Point de repère (ex : près de l'école...)",
+  nom:"Votre nom",
+  tel:"Votre téléphone",
+  valider:"Valider la commande",
+  envoi:"Envoi en cours…",
+  couche_plan:"🗺️ Plan",
+  couche_sat:"🛰️ Satellite",
+  conf_titre:"✅ Commande envoyée !",
+  conf_livraison:"Merci ! Nous avons bien reçu votre commande. Nous vous contactons très bientôt par téléphone pour la confirmer.",
+  conf_mobile:"Merci ! Votre commande a bien été envoyée.",
+  conf_rouge:"Dès réception de votre paiement, nous vous enverrons un message sur votre numéro de téléphone pour en accuser réception. Cette confirmation finalisera définitivement votre commande.",
+  nouvelle:"Faire une nouvelle commande",
+  nb:"NB : Les frais de retrait sont à la charge du client. Veuillez les ajouter au montant envoyé afin que la totalité de la somme due nous parvienne.",
+  nom_aide:"Pour faciliter l'identification de votre paiement, veuillez saisir votre nom complet dans le champ « Votre nom » ci-dessous.",
+  montant:"Montant à payer :",
+  moyen:"Moyen de paiement :",
+  numero:"Numéro :",
+  compte:"Nom du compte :",
+  copier:"📋 Copier le numéro",
+  copie:"Numéro copié :",
+  num_alert:"Numéro :",
+  choisir_d:"Choisissez d'abord vos produits : le montant à payer s'affichera ici.",
+  err_prod:"Choisissez au moins un produit avant de valider.",
+  err_nom:"Veuillez écrire votre nom.",
+  err_tel:"Veuillez écrire votre numéro de téléphone.",
+  err_lieu:"Indiquez le lieu de livraison : position automatique, recherche d'un lieu, repère sur la carte, ou point de repère écrit.",
+  err_envoi:"❌ La commande n'a pas pu être envoyée. Vérifiez votre connexion et réessayez. Vos choix sont conservés.",
+  pos_none:"Position automatique non disponible. Cherchez votre lieu ou placez le repère sur la carte.",
+  pos_ok:"✅ Votre position actuelle (précision environ {p} m)",
+  pos_fail:"⚠️ Position automatique impossible. Cherchez votre lieu ci-dessous ou placez le repère sur la carte.",
+  pos_main:"📌 Position placée à la main",
+  lieu_choisi:"🔍 Lieu choisi : {n}",
+  coords:"Coordonnées :",
+  recent:"Récent",
+  aucun_lieu:"Aucun lieu trouvé. Essayez un autre nom, ou placez le repère sur la carte.",
+  rech_impossible:"Recherche impossible pour le moment. Placez le repère sur la carte."
+},
+mg:{
+  titre_page:"Handefa entana",
+  ma_commande:"Ny baikoko",
+  rech_produit:"🔍 Mitady entana (oh. karaoty, menaka...)",
+  aucun:"Tsy misy entana mifanaraka amin'ny fikarohanao.",
+  total:"Totaly :",
+  panier:"Ny entana nofidiko :",
+  paiement:"Fandoavam-bola",
+  pay_livraison:"💵 Mandoa rehefa tonga ny entana",
+  pay_livraison_court:"Rehefa tonga ny entana",
+  pay_ligne:"Fandoavam-bola",
+  lieu:"Toerana hanaterana ny entana",
+  stat_init:"📡 Mitady ny toerana misy anao…",
+  btn_pos:"📍 Ampiasaina ny toerana misy ahy ankehitriny",
+  rech_lieu:"🔍 Na mitadiava toerana (fokontany, arabe, sekoly...)",
+  aide_carte:"Azonao atokisana koa ny sarintany na afindra ny marika mba hanitsy ny toerana. Ny bokotra eo ambony havanan'ny sarintany dia manova ny karazan'ny sarintany.",
+  repere:"Toerana fantatra manodidina (oh. akaikin'ny sekoly...)",
+  nom:"Ny anaranao",
+  tel:"Ny laharan-telefaonao",
+  valider:"Alefaso ny baiko",
+  envoi:"Eo am-pandefasana…",
+  couche_plan:"🗺️ Sarintany",
+  couche_sat:"🛰️ Satelita",
+  conf_titre:"✅ Lasa ny baiko !",
+  conf_livraison:"Misaotra ! Voaray ny baikonao. Hifandray aminao amin'ny telefaona izahay tsy ho ela mba hanamafy izany.",
+  conf_mobile:"Misaotra ! Lasa soa aman-tsara ny baikonao.",
+  conf_rouge:"Rehefa voaray ny fandoavanao, dia handefa hafatra amin'ny laharan-telefaonao izahay hanamafy fa voaray izany. Io fanamafisana io no hamarana tanteraka ny baikonao.",
+  nouvelle:"Hanao baiko vaovao",
+  nb:"NB : Ny sarany amin'ny fanalana vola dia an'ny mpanjifa. Ampio amin'ny vola alefanao izany mba ho tonga aminay tanteraka ny vola tokony haloa.",
+  nom_aide:"Mba hanamora ny fahafantarana ny fandoavanao, soraty ao amin'ny saha « Ny anaranao » eto ambany ny anaranao feno.",
+  montant:"Vola haloa :",
+  moyen:"Fomba fandoavam-bola :",
+  numero:"Laharana :",
+  compte:"Anaran'ny kaonty :",
+  copier:"📋 Adikao ny laharana",
+  copie:"Voadika ny laharana :",
+  num_alert:"Laharana :",
+  choisir_d:"Fidio aloha ny entana : hiseho eto ny vola haloa.",
+  err_prod:"Misafidiana entana iray farafahakeliny mialoha ny fandefasana.",
+  err_nom:"Soraty ny anaranao azafady.",
+  err_tel:"Soraty ny laharan-telefaonao azafady.",
+  err_lieu:"Ahitsio ny toerana hanaterana : toerana mivantana, fikarohana toerana, marika eo amin'ny sarintany, na soraty ny toerana fantatra manodidina.",
+  err_envoi:"❌ Tsy afaka lasa ny baiko. Hamarino ny rohy internet ary andramo indray. Mbola eo ny entana nofidinao.",
+  pos_none:"Tsy azo ampiasaina ny toerana mivantana. Mitadiava ny toerana na apetraka eo amin'ny sarintany ny marika.",
+  pos_ok:"✅ Ny toerana misy anao ankehitriny (marina eo ho eo amin'ny {p} m)",
+  pos_fail:"⚠️ Tsy azo ny toerana mivantana. Mitadiava ny toerana eto ambany na apetraka eo amin'ny sarintany ny marika.",
+  pos_main:"📌 Toerana napetraka tanana",
+  lieu_choisi:"🔍 Toerana voafidy : {n}",
+  coords:"Tarehimarika :",
+  recent:"Vao haingana",
+  aucun_lieu:"Tsy nahitana toerana. Andramo anarana hafa, na apetraka eo amin'ny sarintany ny marika.",
+  rech_impossible:"Tsy afaka mikaroka amin'izao fotoana izao. Apetraka eo amin'ny sarintany ny marika."
+},
+en:{
+  titre_page:"Order",
+  ma_commande:"My order",
+  rech_produit:"🔍 Search for a product (e.g. carrot, oil...)",
+  aucun:"No product matches your search.",
+  total:"Total:",
+  panier:"My basket:",
+  paiement:"Payment",
+  pay_livraison:"💵 Pay on delivery",
+  pay_livraison_court:"On delivery",
+  pay_ligne:"Payment",
+  lieu:"Delivery location",
+  stat_init:"📡 Finding your location…",
+  btn_pos:"📍 Use my current location",
+  rech_lieu:"🔍 Or search for a place (neighbourhood, street, school...)",
+  aide_carte:"You can also tap the map or drag the marker to adjust it. The button at the top right of the map changes the map type.",
+  repere:"Landmark (e.g. near the school...)",
+  nom:"Your name",
+  tel:"Your phone number",
+  valider:"Confirm the order",
+  envoi:"Sending…",
+  couche_plan:"🗺️ Map",
+  couche_sat:"🛰️ Satellite",
+  conf_titre:"✅ Order sent!",
+  conf_livraison:"Thank you! We have received your order. We will contact you by phone very soon to confirm it.",
+  conf_mobile:"Thank you! Your order has been sent successfully.",
+  conf_rouge:"Once we receive your payment, we will send a message to your phone number to acknowledge receipt. This confirmation will finalise your order.",
+  nouvelle:"Place a new order",
+  nb:"NB: Withdrawal fees are the customer's responsibility. Please add them to the amount you send so that the full amount due reaches us.",
+  nom_aide:"To help us identify your payment, please enter your full name in the “Your name” field below.",
+  montant:"Amount to pay:",
+  moyen:"Payment method:",
+  numero:"Number:",
+  compte:"Account name:",
+  copier:"📋 Copy the number",
+  copie:"Number copied:",
+  num_alert:"Number:",
+  choisir_d:"Please choose your products first: the amount to pay will appear here.",
+  err_prod:"Please choose at least one product before confirming.",
+  err_nom:"Please enter your name.",
+  err_tel:"Please enter your phone number.",
+  err_lieu:"Please indicate the delivery location: automatic position, place search, marker on the map, or a written landmark.",
+  err_envoi:"❌ The order could not be sent. Check your connection and try again. Your choices have been kept.",
+  pos_none:"Automatic location is not available. Search for your place or place the marker on the map.",
+  pos_ok:"✅ Your current location (accuracy about {p} m)",
+  pos_fail:"⚠️ Automatic location failed. Search for your place below or place the marker on the map.",
+  pos_main:"📌 Position set by hand",
+  lieu_choisi:"🔍 Selected place: {n}",
+  coords:"Coordinates:",
+  recent:"Recent",
+  aucun_lieu:"No place found. Try another name, or place the marker on the map.",
+  rech_impossible:"Search is unavailable right now. Place the marker on the map."
+}
+};
+const LOCALES = {fr:"fr-FR", mg:"fr-FR", en:"en-US"};
+const NOMS_LANGUES = {fr:"Français", mg:"Malagasy", en:"English"};
+
+let LANG = "fr";
+try{ const s=localStorage.getItem("langue"); if(s && T[s]) LANG=s; }catch(e){}
+
+function t(cle,vars){
+  let s=(T[LANG] && T[LANG][cle]) || T.fr[cle] || cle;
+  if(vars){ for(const k in vars) s=s.replace("{"+k+"}",vars[k]); }
+  return s;
+}
+function fmt(n){ return n.toLocaleString(LOCALES[LANG]); }
+function nomAff(p){ return p[LANG] || p.nom; }
 function unite(p){ return p.unite || "kg"; }
+function uniteAff(p){ const u=unite(p); return (UNITES[u] && UNITES[u][LANG]) || u; }
+function norm(s){ return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
 function zoom(src){
   document.getElementById("zoomImg").src=src;
   document.getElementById("zoom").style.display="flex";
@@ -116,18 +311,23 @@ function zoom(src){
 
 // ===== PRODUITS =====
 const qte = {};
+PRODUITS.forEach((p,i)=>{ qte[i]=0; });
 const liste = document.getElementById("liste");
-PRODUITS.forEach((p,i)=>{
-  qte[i]=0;
-  const f = p.photo ? encodeURI(p.photo) : "";
-  const photo = p.photo
-    ? `<img src="${f}" alt="${p.nom}" loading="lazy" onclick="zoom('${f}')" onerror="this.outerHTML='<div class=ph>📦</div>'">`
-    : `<div class="ph">📦</div>`;
-  liste.innerHTML += `<div class="ligne" id="l${i}">${photo}
-  <div class="txt">${p.nom}<br><small>${p.prix} Ar/${unite(p)}</small></div>
-  <div class="qte"><button onclick="chg(${i},-1)">−</button><span id="q${i}">0</span><button onclick="chg(${i},1)">+</button></div></div>`;
-});
 
+function renderListe(){
+  let h="";
+  PRODUITS.forEach((p,i)=>{
+    const f = p.photo ? encodeURI(p.photo) : "";
+    const photo = p.photo
+      ? `<img src="${f}" alt="${nomAff(p)}" loading="lazy" onclick="zoom('${f}')" onerror="this.outerHTML='<div class=ph>📦</div>'">`
+      : `<div class="ph">📦</div>`;
+    h += `<div class="ligne" id="l${i}">${photo}
+    <div class="txt">${nomAff(p)}<br><small>${fmt(p.prix)} Ar/${uniteAff(p)}</small></div>
+    <div class="qte"><button onclick="chg(${i},-1)">−</button><span id="q${i}">${qte[i]}</span><button onclick="chg(${i},1)">+</button></div></div>`;
+  });
+  liste.innerHTML=h;
+  filtrer();
+}
 function chg(i,d){
   qte[i]=Math.max(0,qte[i]+d);
   document.getElementById("q"+i).textContent=qte[i];
@@ -135,27 +335,27 @@ function chg(i,d){
   majPaiement();
 }
 function calcul(){
-  let t=0, lignes=[];
+  let tot=0, lignes=[];
   PRODUITS.forEach((p,i)=>{
-    t+=p.prix*qte[i];
-    if(qte[i]>0) lignes.push("• "+p.nom+" : "+qte[i]+" "+unite(p));
+    tot+=p.prix*qte[i];
+    if(qte[i]>0) lignes.push("• "+nomAff(p)+" : "+qte[i]+" "+uniteAff(p));
   });
-  document.getElementById("total").textContent="Total : "+t.toLocaleString("fr-FR")+" Ar";
-  document.getElementById("panier").textContent = lignes.length ? "Mon panier :\n"+lignes.join("\n") : "";
-  return t;
+  document.getElementById("total").textContent=t("total")+" "+fmt(tot)+" Ar";
+  document.getElementById("panier").textContent = lignes.length ? t("panier")+"\n"+lignes.join("\n") : "";
+  return tot;
 }
-calcul();
-
-document.getElementById("rechProduit").addEventListener("input",e=>{
-  const q=norm(e.target.value.trim());
+function filtrer(){
+  const q=norm(document.getElementById("rechProduit").value.trim());
   let visibles=0;
   PRODUITS.forEach((p,i)=>{
-    const ok = norm(p.nom).includes(q);
-    document.getElementById("l"+i).style.display = ok ? "" : "none";
+    const ok=[p.nom,p.mg,p.en].filter(Boolean).some(n=>norm(n).includes(q));
+    const el=document.getElementById("l"+i);
+    if(el) el.style.display = ok ? "" : "none";
     if(ok) visibles++;
   });
   document.getElementById("aucun").classList.toggle("cache", visibles>0);
-});
+}
+document.getElementById("rechProduit").addEventListener("input",filtrer);
 
 // ===== CARTE (plan ou satellite) =====
 let positionChoisie=false;
@@ -167,46 +367,63 @@ const satellite = L.layerGroup([
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19})
 ]);
 plan.addTo(carte);
-L.control.layers({"🗺️ Plan":plan,"🛰️ Satellite":satellite},null,{position:"topright",collapsed:true}).addTo(carte);
+let ctrlCouches=null;
+function majCouches(){
+  if(ctrlCouches) ctrlCouches.remove();
+  const couches={};
+  couches[t("couche_plan")]=plan;
+  couches[t("couche_sat")]=satellite;
+  ctrlCouches=L.control.layers(couches,null,{position:"topright",collapsed:true}).addTo(carte);
+}
 
 const repere = L.marker(carte.getCenter(),{draggable:true}).addTo(carte);
 
-function majStatut(texte){
-  const ll=repere.getLatLng();
-  document.getElementById("statut").innerHTML =
-    texte+"<br><small>Coordonnées : "+ll.lat.toFixed(6)+", "+ll.lng.toFixed(6)+"</small>";
+// Statut de la position (traduit à chaque changement de langue)
+let statutEtat={cle:"stat_init",vars:{},coords:false};
+function setStatut(cle,vars,coords){
+  statutEtat={cle:cle,vars:vars||{},coords:!!coords};
+  renderStatut();
 }
-function definirPosition(lat,lng,zoom,texte){
+function renderStatut(){
+  const el=document.getElementById("statut");
+  el.textContent=t(statutEtat.cle,statutEtat.vars);
+  if(statutEtat.coords){
+    const ll=repere.getLatLng();
+    el.appendChild(document.createElement("br"));
+    const s=document.createElement("small");
+    s.textContent=t("coords")+" "+ll.lat.toFixed(6)+", "+ll.lng.toFixed(6);
+    el.appendChild(s);
+  }
+}
+function definirPosition(lat,lng,zoomNiveau,cle,vars){
   repere.setLatLng([lat,lng]);
-  carte.setView([lat,lng],zoom);
+  carte.setView([lat,lng],zoomNiveau);
   positionChoisie=true;
-  majStatut(texte);
+  setStatut(cle,vars,true);
 }
 carte.on("click",e=>{
   repere.setLatLng(e.latlng);
   positionChoisie=true;
-  majStatut("📌 Position placée à la main");
+  setStatut("pos_main",{},true);
 });
 repere.on("dragend",()=>{
   positionChoisie=true;
-  majStatut("📌 Position placée à la main");
+  setStatut("pos_main",{},true);
 });
 
 // Position automatique du client
-function maPosition(auto){
+function maPosition(){
   if(!navigator.geolocation){
-    document.getElementById("statut").textContent="Position automatique non disponible. Cherchez votre lieu ou placez le repère sur la carte.";
+    setStatut("pos_none");
     return;
   }
-  document.getElementById("statut").textContent="📡 Recherche de votre position…";
+  setStatut("stat_init");
   navigator.geolocation.getCurrentPosition(pos=>{
-    const prec=Math.round(pos.coords.accuracy);
-    definirPosition(pos.coords.latitude,pos.coords.longitude,17,"✅ Votre position actuelle (précision environ "+prec+" m)");
+    definirPosition(pos.coords.latitude,pos.coords.longitude,17,"pos_ok",{p:Math.round(pos.coords.accuracy)});
   },()=>{
-    document.getElementById("statut").textContent="⚠️ Position automatique impossible. Cherchez votre lieu ci-dessous ou placez le repère sur la carte.";
+    setStatut("pos_fail");
   },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
 }
-maPosition(true);
 
 // ===== RECHERCHE DE LIEU AVEC SUGGESTIONS (Photon / OpenStreetMap) =====
 const champ=document.getElementById("recherche");
@@ -226,9 +443,9 @@ function ajouterRecent(lieu){
 function bouton(icone,lieu){
   const b=document.createElement("button");
   b.className="res";
-  const t=document.createElement("b");
-  t.textContent=icone+" "+lieu.titre;
-  b.appendChild(t);
+  const tt=document.createElement("b");
+  tt.textContent=icone+" "+lieu.titre;
+  b.appendChild(tt);
   if(lieu.suite){
     const s=document.createElement("small");
     s.textContent=lieu.suite;
@@ -239,7 +456,7 @@ function bouton(icone,lieu){
 }
 function choisir(lieu){
   const court = lieu.suite ? lieu.titre+", "+lieu.suite.split(",")[0] : lieu.titre;
-  definirPosition(lieu.lat,lieu.lon,17,"🔍 Lieu choisi : "+court);
+  definirPosition(lieu.lat,lieu.lon,17,"lieu_choisi",{n:court});
   ajouterRecent(lieu);
   champ.value=lieu.titre;
   zone.innerHTML="";
@@ -251,7 +468,7 @@ function afficherRecents(){
   if(!r.length) return;
   const h=document.createElement("div");
   h.className="titre";
-  h.textContent="Récent";
+  h.textContent=t("recent");
   zone.appendChild(h);
   r.forEach(l=>zone.appendChild(bouton("🕘",l)));
 }
@@ -271,13 +488,13 @@ async function chercher(q){
       return {titre,suite,lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0]};
     });
     if(!lieux.length){
-      zone.textContent="Aucun lieu trouvé. Essayez un autre nom, ou placez le repère sur la carte.";
+      zone.textContent=t("aucun_lieu");
       return;
     }
     lieux.forEach(l=>zone.appendChild(bouton("📍",l)));
   }catch(e){
     if(id!==dernier) return;
-    zone.textContent="Recherche impossible pour le moment. Placez le repère sur la carte.";
+    zone.textContent=t("rech_impossible");
   }
 }
 champ.addEventListener("input",()=>{
@@ -302,28 +519,48 @@ const PAIEMENT_NUMEROS = {
 };
 function copierNumero(n){
   if(navigator.clipboard){
-    navigator.clipboard.writeText(n).then(()=>alert("Numéro copié : "+n)).catch(()=>alert("Numéro : "+n));
-  }else{ alert("Numéro : "+n); }
+    navigator.clipboard.writeText(n).then(()=>alert(t("copie")+" "+n)).catch(()=>alert(t("num_alert")+" "+n));
+  }else{ alert(t("num_alert")+" "+n); }
 }
 function majPaiement(){
   const choix=document.querySelector('input[name="paiement"]:checked').value;
   const zonePay=document.getElementById("infoPay");
   const p=PAIEMENT_NUMEROS[choix];
   if(!p){ zonePay.classList.add("cache"); return; }
-  const total=calcul();
-  zonePay.innerHTML = total===0
-    ? "Choisissez d'abord vos produits : le montant à payer s'affichera ici."
-    : `Montant à payer : <b>${total.toLocaleString("fr-FR")} Ar</b><br>
-Moyen de paiement : <b>${choix}</b><br>
-Numéro : <b style="font-size:20px">${p.affiche}</b><br>
-Nom du compte : <b>${p.compte}</b><br>
-<button class="gros" type="button" onclick="copierNumero('${p.numero}')">📋 Copier le numéro</button>
-<div class="nb">NB : Les frais de retrait sont à la charge du client. Veuillez les ajouter au montant envoyé afin que la totalité de la somme due nous parvienne.</div>
-<small>Pour faciliter l'identification de votre paiement, veuillez saisir votre nom complet dans le champ « Votre nom » ci-dessous.</small>`;
+  const tot=calcul();
+  zonePay.innerHTML = tot===0
+    ? t("choisir_d")
+    : `${t("montant")} <b>${fmt(tot)} Ar</b><br>
+${t("moyen")} <b>${choix}</b><br>
+${t("numero")} <b style="font-size:20px">${p.affiche}</b><br>
+${t("compte")} <b>${p.compte}</b><br>
+<button class="gros" type="button" onclick="copierNumero('${p.numero}')">${t("copier")}</button>
+<div class="nb">${t("nb")}</div>
+<small>${t("nom_aide")}</small>`;
   zonePay.classList.remove("cache");
 }
 document.querySelectorAll('input[name="paiement"]').forEach(r=>r.addEventListener("change",majPaiement));
-majPaiement();
+
+// ===== CHANGEMENT DE LANGUE =====
+function appliquerStatique(){
+  document.querySelectorAll("[data-i18n]").forEach(e=>{ e.textContent=t(e.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(e=>{ e.placeholder=t(e.getAttribute("data-i18n-ph")); });
+}
+function setLang(l){
+  if(!T[l]) l="fr";
+  LANG=l;
+  try{ localStorage.setItem("langue",l); }catch(e){}
+  document.documentElement.lang=l;
+  document.title=t("titre_page");
+  appliquerStatique();
+  document.querySelectorAll("#langues button").forEach(b=>b.classList.toggle("actif",b.getAttribute("data-l")===l));
+  renderListe();
+  calcul();
+  majPaiement();
+  renderStatut();
+  majCouches();
+  zone.innerHTML="";
+}
 
 // ===== ENVOI DE LA COMMANDE =====
 function montrerErreur(msg){
@@ -338,29 +575,39 @@ async function valider(){
   const nom=document.getElementById("nom").value.trim();
   const tel=document.getElementById("tel").value.trim();
   const rep=document.getElementById("repere").value.trim();
-  const total=calcul();
+  const tot=calcul();
 
-  if(total===0) return montrerErreur("Choisissez au moins un produit avant de valider.");
-  if(!nom) return montrerErreur("Veuillez écrire votre nom.");
-  if(!tel) return montrerErreur("Veuillez écrire votre numéro de téléphone.");
-  if(!positionChoisie && !rep) return montrerErreur("Indiquez le lieu de livraison : position automatique, recherche d'un lieu, repère sur la carte, ou point de repère écrit.");
+  if(tot===0) return montrerErreur(t("err_prod"));
+  if(!nom) return montrerErreur(t("err_nom"));
+  if(!tel) return montrerErreur(t("err_tel"));
+  if(!positionChoisie && !rep) return montrerErreur(t("err_lieu"));
 
-  let txt="";
-  PRODUITS.forEach((p,i)=>{ if(qte[i]>0) txt+=`- ${p.nom} : ${qte[i]} ${unite(p)}\n`; });
-  txt+=`\nTotal : ${total.toLocaleString("fr-FR")} Ar`;
   const paiement=document.querySelector('input[name="paiement"]:checked').value;
-  txt+=`\nPaiement : ${paiement}`;
+
+  // Texte reçu par e-mail : toujours en français
+  let txtMail="";
+  PRODUITS.forEach((p,i)=>{ if(qte[i]>0) txtMail+=`- ${p.nom} : ${qte[i]} ${unite(p)}\n`; });
+  txtMail+=`\nTotal : ${tot.toLocaleString("fr-FR")} Ar`;
+  txtMail+=`\nPaiement : ${paiement}`;
+  txtMail+=`\nLangue du client : ${NOMS_LANGUES[LANG]}`;
+
+  // Récapitulatif montré au client : dans sa langue
+  let txtClient="";
+  PRODUITS.forEach((p,i)=>{ if(qte[i]>0) txtClient+=`- ${nomAff(p)} : ${qte[i]} ${uniteAff(p)}\n`; });
+  txtClient+=`\n${t("total")} ${fmt(tot)} Ar`;
+  const payAff = paiement==="À la livraison" ? t("pay_livraison_court") : paiement;
+  txtClient+=`\n${t("pay_ligne")} : ${payAff}`;
 
   const ll=repere.getLatLng();
   const coord=ll.lat.toFixed(6)+","+ll.lng.toFixed(6);
   const lieu = positionChoisie
     ? `Coordonnées : ${coord}\nVoir sur Google Maps : https://www.google.com/maps?q=${coord}\nItinéraire Google Maps : https://www.google.com/maps/dir/?api=1&destination=${coord}`
     : "Pas de position sur la carte (voir le point de repère)";
-  const complet = `COMMANDE\n${txt}\n\nNom : ${nom}\nTél : ${tel}\nPoint de repère : ${rep}\n\n${lieu}`;
+  const complet = `COMMANDE\n${txtMail}\n\nNom : ${nom}\nTél : ${tel}\nPoint de repère : ${rep}\n\n${lieu}`;
 
   const btn=document.getElementById("btn");
   btn.disabled=true;
-  btn.textContent="Envoi en cours…";
+  btn.textContent=t("envoi");
 
   try{
     const rep2 = await fetch("https://api.web3forms.com/submit",{
@@ -380,14 +627,14 @@ async function valider(){
       const msgConf=document.getElementById("msgConf");
       const msgPaiement=document.getElementById("msgPaiement");
       if(paiement==="À la livraison"){
-        msgConf.textContent="Merci ! Nous avons bien reçu votre commande. Nous vous contactons très bientôt par téléphone pour la confirmer.";
+        msgConf.textContent=t("conf_livraison");
         msgPaiement.classList.add("cache");
       }else{
-        msgConf.textContent="Merci ! Votre commande a bien été envoyée.";
-        msgPaiement.textContent="Dès réception de votre paiement, nous vous enverrons un message sur votre numéro de téléphone pour en accuser réception. Cette confirmation finalisera définitivement votre commande.";
+        msgConf.textContent=t("conf_mobile");
+        msgPaiement.textContent=t("conf_rouge");
         msgPaiement.classList.remove("cache");
       }
-      document.getElementById("recap").textContent=txt;
+      document.getElementById("recap").textContent=txtClient;
       document.getElementById("formulaire").classList.add("cache");
       document.getElementById("confirmation").classList.remove("cache");
       window.scrollTo({top:0,behavior:"smooth"});
@@ -396,10 +643,14 @@ async function valider(){
     }
   }catch(err){
     btn.disabled=false;
-    btn.textContent="Valider la commande";
-    montrerErreur("❌ La commande n'a pas pu être envoyée. Vérifiez votre connexion et réessayez. Vos choix sont conservés.");
+    btn.textContent=t("valider");
+    montrerErreur(t("err_envoi"));
   }
 }
+
+// ===== DÉMARRAGE =====
+setLang(LANG);
+maPosition();
 </script>
 </body>
 </html>
